@@ -43,7 +43,10 @@ function mouseMove(event) {
     if (mouseIsDown) {
         //landscapeBackground.intensity = mouseX/fullX;
         //landscapeBackground.speed = 1 + ((mouseY/fullY) * 1000);
+        color.master.R = -10 + ((mouseX/fullX) * 20) + ((mouseY/fullY) * 25);
 
+        color.master.G = -50 + ((mouseY/fullY) * 100);
+        color.master.B = -50 + ((mouseY/fullY) * 100) + ((mouseX/fullX) * 10);
     }
 
 }

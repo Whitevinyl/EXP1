@@ -6,9 +6,9 @@
 function LandscapeBackground() {
     this.simplex = null;
     this.yOff = 0;
-    this.res = new Point(18,30);
-    this.resMult = 15;
-    this.scaleDiv = 16;
+    this.res = new Point(Math.floor(fullX/(60*units)),28);
+    this.resMult = 18;
+    this.scaleDiv = 17;
     this.yRange = 80*units;
     this.dataRes = new Point(this.res.x,this.res.y*this.resMult);
     this.layers = [];
@@ -17,9 +17,10 @@ function LandscapeBackground() {
     this.size = new Point(fullX,fullY * 1.5);
 
     this.intensity = tombola.rangeFloat(0,1);
-    this.speed = 1;
     this.weave = 0;
-    this.weave1 = 0;
+
+    this.particles = [];
+    this.testCount = 0;
 
     this.generate();
 
@@ -27,11 +28,13 @@ function LandscapeBackground() {
 
 LandscapeBackground.prototype.generate = function() {
     this.simplex = new SimplexNoise();
+    this.yOff = 0;
     this.yRange = 80*units;
     this.size = new Point(fullX,fullY * 1.5);
     this.layers = [];
     this.data = [];
     this.data2 = [];
+    this.particles = [];
 
     var i;
 
@@ -56,8 +59,32 @@ LandscapeBackground.prototype.generate = function() {
         this.layers.push( new LandscapeLayer(pos, data, data2));
 
     }
+
+
+    for (i=0; i<250; i++) {
+        pos = new Point(Math.random()*fullX, Math.random()*fullY);
+        var vector = new Vector(tombola.rangeFloat(-1.5,1.5), tombola.rangeFloat(-0.2,0.2));
+        var size = tombola.rangeFloat(0.15,0.95);
+        this.particles.push( new WaterParticle(pos, vector, size));
+    }
+
 };
 
+
+LandscapeBackground.prototype.resize = function() {
+    //this.generate();
+    this.yRange = 80*units;
+    this.size = new Point(fullX,fullY * 1.5);
+    this.dataRes.x = this.res.x = Math.floor(fullX/(60*units));
+
+    for (var i=0; i<this.res.y; i++) {
+
+        var pos = new Point(dx, dy - (this.size.y/2) + ((this.size.y/this.res.y) * i));
+
+        this.layers[i].pos = pos;
+
+    }
+};
 
 
 //-------------------------------------------------------------------------------------------
@@ -74,10 +101,13 @@ LandscapeBackground.prototype.update = function() {
 
     this.intensity = (1 + this.simplex.noise(0,1000 + (this.yOff/200)))/2;
 
-    //this.intensity += tombola.fudgeFloat(4,0.005);
-    //this.intensity = valueInRange(this.intensity,0,1);
 
-    this.size.y = fullY * (1.5 + (1 * this.intensity));
+    var yScale = 1.5;
+    if (device=='mobile') {
+        yScale = 1.1;
+    }
+
+    this.size.y = fullY * (yScale + (yScale * this.intensity));
 
     this.data.shift();
     this.data2.shift();
@@ -106,114 +136,130 @@ LandscapeBackground.prototype.update = function() {
 
 LandscapeBackground.prototype.draw = function() {
 
-    //color.stroke(cxa,cols[0]);
-    cxa.globalAlpha = 1;
-
-    for (var i=0; i<this.layers.length; i++) {
-        this.layers[i].draw(cxa, fullX, 90*units);
-    }
-
-
     var ctx = cxa;
+    ctx.globalAlpha = 1;
 
-    color.stroke(cxa,cols[2]);
-    //color.stroke(cxa,bgCols[0]);
-    //ctx.beginPath();
+    var height = this.yRange;
+    var pad = 0.5 * units;
+    var ripple = -this.intensity * (height/3);
 
-    cxa.globalAlpha = 0.15;
-    for (i=1; i<this.layers.length; i++) {
+
+    var xDiv = this.size.x/this.res.x;
+    var yDiv = this.size.y/this.res.y;
+    var yGutter = (this.size.y - fullY)/2;
+
+    var highlight = colorBlend(  bgCol, cols[1], 18 );
+
+
+    var length = this.res.y;
+    for (var i=1; i<length; i++) {
         var pl = this.layers[i-1];
         var l = this.layers[i];
         var sx = l.pos.x - (fullX/2);
-        var xd = fullX / (l.data.length-1);
-        var height = this.yRange;
+        var xd = fullX / (this.res.x-1);
+
 
         for (var h=0; h<this.res.x; h++) {
 
-            // stroke //
-            /*if (i%2==0) {
-                if (h%2!==0) {
-                    if (h>0) {
-                        ctx.moveTo(sx + (xd * (h-1)), pl.pos.y + (pl.data[h-1] * height));
-                    } else {
-                        ctx.moveTo(sx + (xd * h), l.pos.y + (l.data[h] * height));
-                    }
-                    ctx.lineTo(sx + (xd * h), l.pos.y + (l.data[h] * height));
-                    ctx.lineTo(sx + (xd * (h+1)), pl.pos.y + (pl.data[h+1] * height));
-                }
 
-            } else {
-                if (h%2==0) {
-                    if (h>0) {
-                        ctx.moveTo(sx + (xd * (h-1)), pl.pos.y + (pl.data[h-1] * height));
-                    } else {
-                        ctx.moveTo(sx + (xd * h), l.pos.y + (l.data[h] * height));
-                    }
-                    ctx.lineTo(sx + (xd * h), l.pos.y + (l.data[h] * height));
-                    ctx.lineTo(sx + (xd * (h+1)), pl.pos.y + (pl.data[h+1] * height));
-                }
-            }*/
 
             // fill //
 
-            var d = (l.pos.y + (l.data[h] * height)) - (pl.pos.y + (pl.data[h] * height));
-            var pad = 0.05;
-            //if (d > 0) {
+            var d = (l.pos.y + (l.data[h] * height)) - (pl.pos.y + (pl.data[h] * height)); // tri height
+            var p = (d / (this.yRange/2)) * 100; // percent
+            var col = colorBlend(  bgCol, highlight, 100 - p );
 
-                var p = (d / (this.yRange/2)) * 100;
-                color.fill(ctx, colorBlend(  bgCol, cols[1], 100 - p ) );
-                var ripple = -this.intensity * (height/3);
+            // white tint //
+            var xPos = sx + (xd * h);
+            var yPos = l.pos.y + (l.data[h] * height) + (l.data2[h] * ripple);
 
-                if ((i%2==0 && h%2!==0) || (i%2!==0 && h%2==0)) {
-                    ctx.beginPath();
-                    if (h>0) {
-                        ctx.moveTo(sx + (xd * (h-1)) - pad, pl.pos.y + (pl.data[h-1] * height) + (pl.data2[h-1] * ripple) - pad);
-                    } else {
-                        ctx.moveTo(sx + (xd * h), pl.pos.y + (pl.data[h] * height) + (pl.data2[h] * ripple) - pad);
-                    }
-                    ctx.lineTo(sx + (xd * h), l.pos.y + (l.data[h] * height) + (l.data2[h] * ripple) + pad);
-                    if (h<this.res.x-1) {
-                        ctx.lineTo(sx + (xd * (h+1)) + pad, pl.pos.y + (pl.data[h+1] * height) + (pl.data2[h+1] * ripple) - pad);
-                    } else {
-                        ctx.lineTo(sx + (xd * h), pl.pos.y + (pl.data[h] * height) + (pl.data2[h] * ripple) - pad);
-                    }
+            if (xPos > (dx - (120*units)) && xPos < (dx + (120*units))) {
 
-                    ctx.closePath();
-                    ctx.fill();
+                if (yPos > (dy + (50*units)) && yPos < (dy + (200*units))) {
+                    d = (dy + (125*units)) - yPos;
+                    var d2 = dx - xPos;
+                    if (d<0) d = -d;
+                    if (d2<0) d2 = -d2;
+
+                    p = ((1 - (d / (75*units))) * (1 - (d2 / (120*units)) )) * 3;
+                    col = colorBlend(col,cols[0],p);
+                }
+            }
+
+            color.fill(ctx, col );
+
+
+            if ((i%2==0 && h%2!==0) || (i%2!==0 && h%2==0)) {
+                ctx.beginPath();
+                if (h>0) {
+                    ctx.moveTo(sx + (xd * (h-1)) - pad, pl.pos.y + (pl.data[h-1] * height) + (pl.data2[h-1] * ripple) - pad);
+                } else {
+                    ctx.moveTo(sx + (xd * h), pl.pos.y + (pl.data[h] * height) + (pl.data2[h] * ripple) - pad);
+                }
+                ctx.lineTo(sx + (xd * h), l.pos.y + (l.data[h] * height) + (l.data2[h] * ripple) + pad);
+                if (h<this.res.x-1) {
+                    ctx.lineTo(sx + (xd * (h+1)) + pad, pl.pos.y + (pl.data[h+1] * height) + (pl.data2[h+1] * ripple) - pad);
                 }
                 else {
-                    ctx.beginPath();
-                    if (h>0) {
-                        ctx.moveTo(sx + (xd * (h-1)) - pad, l.pos.y + (l.data[h-1] * height) + (l.data2[h-1] * ripple) + pad);
-                    } else {
-                        ctx.moveTo(sx + (xd * h), l.pos.y + (l.data[h] * height) + (l.data2[h] * ripple) + pad);
-                    }
                     ctx.lineTo(sx + (xd * h), pl.pos.y + (pl.data[h] * height) + (pl.data2[h] * ripple) - pad);
-                    if (h<this.res.x-1) {
-                        ctx.lineTo(sx + (xd * (h+1)) + pad, l.pos.y + (l.data[h+1] * height) + (l.data2[h+1] * ripple) + pad);
-                    } else {
-                        ctx.lineTo(sx + (xd * h), l.pos.y + (l.data[h] * height) + (l.data2[h] * ripple) + pad);
-                    }
-
-                    ctx.closePath();
-                    ctx.fill();
                 }
 
+                ctx.closePath();
+                ctx.fill();
+            }
+            else {
+                ctx.beginPath();
+                if (h>0) {
+                    ctx.moveTo(sx + (xd * (h-1)) - pad, l.pos.y + (l.data[h-1] * height) + (l.data2[h-1] * ripple) + pad);
+                } else {
+                    ctx.moveTo(sx + (xd * h), l.pos.y + (l.data[h] * height) + (l.data2[h] * ripple) + pad);
+                }
+                ctx.lineTo(sx + (xd * h), pl.pos.y + (pl.data[h] * height) + (pl.data2[h] * ripple) - pad);
+                if (h<this.res.x-1) {
+                    ctx.lineTo(sx + (xd * (h+1)) + pad, l.pos.y + (l.data[h+1] * height) + (l.data2[h+1] * ripple) + pad);
+                }
+                else {
+                    ctx.lineTo(sx + (xd * h), l.pos.y + (l.data[h] * height) + (l.data2[h] * ripple) + pad);
+                }
 
-            //}
+                ctx.closePath();
+                ctx.fill();
+            }
 
         }
 
     }
-    //ctx.stroke();
 
 
-    cxa.globalAlpha = 1;
-    color.fill(cxa,cols[2]);
-    //drawLogo(dx,dy,80*units,cxa,false,false);
+    color.fill(cxa,cols[0]);
+    length = this.particles.length;
+    for (i=0; i<length; i++) {
+
+        var gridX = Math.floor(this.particles[i].pos.x / xDiv);
+        var gridY = Math.floor((yGutter + (this.particles[i].pos.y)) / yDiv);
+
+        var yOff = (this.layers[gridY].data[gridX] * height) + (this.layers[gridY].data2[gridX] * ripple);
+        this.particles[i].update(yOff);
+        this.particles[i].draw();
+    }
+
+
+    cxa.globalAlpha = 0.75;
+    if (noisePNG) {
+        drawPattern(0,0,fullX,fullY,noisePNG,200,ctx);
+    }
+
+
     cxa.globalAlpha = 1;
     color.stroke(cxa,cols[0]);
-    //color.stroke(cxa,bgCols[0]);
+
+    /*ctx.beginPath();
+    ctx.moveTo(dx - (85*units),dy);
+    ctx.lineTo(dx - (75*units),dy);
+    ctx.moveTo(dx + (85*units),dy);
+    ctx.lineTo(dx + (75*units),dy);
+    ctx.stroke();*/
+
     drawLogo(dx,dy,80*units,cxa,false,true);
 
 };
@@ -258,7 +304,7 @@ LandscapeLayer.prototype.draw = function(ctx, w, h) {
 
 
     // draw line //
-    /*color.stroke(cxa,cols[2]);
+    color.stroke(cxa,cols[2]);
     ///color.stroke(cxa,cols[0]);
     //ctx.strokeStyle = grad;
     ctx.beginPath();
@@ -266,7 +312,7 @@ LandscapeLayer.prototype.draw = function(ctx, w, h) {
     for (i=1; i<this.data.length; i++) {
         ctx.lineTo(sx + (xd * i), this.pos.y + (this.data[i] * h));
     }
-    ctx.stroke();*/
+    ctx.stroke();
 
 
     /*color.stroke(cxa,cols[0]);
@@ -282,6 +328,48 @@ LandscapeLayer.prototype.draw = function(ctx, w, h) {
     }
     ctx.stroke();*/
 
-
-
 };
+
+
+function WaterParticle(pos,vector,size) {
+    this.pos = pos;
+    this.vector = vector;
+    this.yOff = 0;
+    this.size = size;
+    this.alpha = tombola.rangeFloat(0,0.1);
+}
+WaterParticle.prototype.update = function(yOff) {
+    this.pos.x += tombola.rangeFloat(0,this.vector.x);
+    this.pos.y += tombola.rangeFloat(0,this.vector.y);
+
+    this.alpha += tombola.rangeFloat(-0.01,0.01);
+    this.alpha = valueInRange(this.alpha,0,0.2);
+
+    this.yOff = lerp(this.yOff, yOff, 5);
+
+    if (this.pos.x<0) {
+        this.pos.x = fullX;
+    }
+    if (this.pos.x>fullX) {
+        this.pos.x = 0;
+    }
+    if (this.pos.y<0) {
+        this.pos.y = fullY;
+    }
+    if (this.pos.y>fullY) {
+        this.pos.y = 0;
+    }
+};
+WaterParticle.prototype.draw = function() {
+    cxa.globalAlpha = this.alpha;
+    cxa.beginPath();
+    cxa.arc(this.pos.x, this.pos.y + this.yOff, this.size * units, 0, TAU);
+    cxa.closePath();
+    cxa.fill();
+};
+
+
+function lerp(current,destination,speed) {
+    return current + (((destination-current)/100) * speed);
+}
+

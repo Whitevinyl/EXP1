@@ -26,6 +26,8 @@ var bodyType = 0;
 var subType = 0;
 var device = "desktop";
 
+var TAU = 2 * Math.PI;
+
 
 // INTERACTION //
 var mouseX = 0;
@@ -159,3 +161,12 @@ function valueInRange(value,floor,ceiling) {
 
 
 
+//-------------------------------------------------------------------------------------------
+//  RESIZE
+//-------------------------------------------------------------------------------------------
+
+
+function resize() {
+    metrics();
+    landscapeBackground.resize();
+}

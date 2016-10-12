@@ -6,9 +6,9 @@
 //var RGBA = require('./rgba');
 
 function Color() {
-    this.master = new RGBA(0,0,0,0);
-    this.highPass = new RGBA(0,-6,0,0);
-    this.lowPass = new RGBA(9,0,0,0);
+    this.master = new RGBA(11,3,8,0);
+    this.highPass = new RGBA(-1,-4,0,0);
+    this.lowPass = new RGBA(4,-3,-3,0);
 }
 var color = new Color();
 

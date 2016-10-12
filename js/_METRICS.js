@@ -43,7 +43,7 @@ function metrics() {
     if (device=="mobile") {
 
         u = (width * ratio) * 2.6;
-        units = (u/1200);
+        units = (u/1000);
 
         // TEXT SIZES //
         headerType = Math.round(u/25);

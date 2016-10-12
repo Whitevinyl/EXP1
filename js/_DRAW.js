@@ -7,6 +7,8 @@
 //  BG
 //-------------------------------------------------------------------------------------------
 
+var noisePNG = new Image();
+noisePNG.src = 'noise10perc.png';
 
 function drawBG() {
 
@@ -29,8 +31,19 @@ function drawBG() {
 
 function drawScene() {
 
+    cxa.globalAlpha = 1;
+    cxa.lineWidth = 1;
+    color.fill(cxa,cols[1]);
+    color.stroke(cxa,cols[1]);
+    cxa.textAlign = 'left';
+    cxa.font = "400 " + midType + "px Raleway";
+    //cxa.fillText('Whitevinyl is the work of Luke Twyman.',dx + (100*units), dy + (80*units) - midType);
 
-
+    cxa.beginPath();
+    cxa.moveTo(dx - (10*units), fullY - (60*units));
+    cxa.lineTo(dx, fullY - (50*units));
+    cxa.lineTo(dx + (10*units), fullY - (60*units));
+    cxa.stroke();
 }
 
 
@@ -53,14 +66,11 @@ function drawLogo(x,y,s,ctx,baseline,stroke) {
         ctx.lineTo(x-(units*0.105*s),y); // bar bottom left
         ctx.lineTo(x+(units*0.075*s),y); // bar bottom right
         ctx.lineTo(x+(units*0.075*s),y-(units*0.69*s)); // bar right join
-        //ctx.closePath();
-        //ctx.stroke();
-
 
         ctx.moveTo(x-(units*0.075*s),y-(units*s)); // bar top left
-        ctx.lineTo(x+(units*0.105*s),y-(units*s)); // bar top right
-        ctx.lineTo(x+(units*0.6*s),y); // right arm bottom right
         ctx.lineTo(x+(units*0.42*s),y); // right arm bottom left
+        ctx.lineTo(x+(units*0.6*s),y); // right arm bottom right
+        ctx.lineTo(x+(units*0.105*s),y-(units*s)); // bar top right
         ctx.lineTo(x-(units*0.075*s),y-(units*s)); // bar top left
         ctx.lineTo(x-(units*0.075*s),y-(units*0.31*s)); // bar left join
         ctx.stroke();
@@ -98,7 +108,18 @@ function colorBlend(col1,col2,percent) {
     return new RGBA(r,g,b,a);
 }
 
+function drawPattern(x,y,w,h,pattern,size,ctx) {
 
+    var c = Math.ceil(w/size);
+    var r = Math.ceil(h/size);
+    var i,j;
+
+    for (i=0; i<r; i++) { // for each row
+        for (j=0; j<c; j++) { // for each col
+            ctx.drawImage(pattern, 0, 0, pattern.width, pattern.height, x+(j*size), y+(i*size), size, size);
+        }
+    }
+}
 
 
 //-------------------------------------------------------------------------------------------

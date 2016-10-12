@@ -3,7 +3,7 @@
  */
 
 WebFontConfig = {
-    google: { families: [ 'Cabin::latin' ] }
+    google: { families: [ 'Raleway::latin' ] }
 };
 (function() {
     var wf = document.createElement('script');
